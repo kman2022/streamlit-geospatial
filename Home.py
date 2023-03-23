@@ -7,7 +7,7 @@ st.sidebar.title("About")
 st.sidebar.info(
     """
     - Web App URL: <https://streamlit.geemap.org>
-    - GitHub repository: <https://github.com/giswqs/streamlit-geospatial>
+    - GitHub repository: <https://github.com/kman2022/streamlit-multipage-template>
     """
 )
 
