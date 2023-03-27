@@ -10,6 +10,7 @@ This will allow the maps to run faster and reduce some of the obvious errors in 
 
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 
 LOC_PATH = '/Users/kristian.lande@leveltenenergy.com/Documents/GitHub/streamlit-geospatial/data/'
 IQ = 'queues_2021_clean_data.xlsx'
@@ -29,7 +30,6 @@ df_iq['on_date'] = pd.to_datetime(df_iq['on_date'],errors ='coerce') # 1,571
 # prop_date = proposed online date; 22,020
 df_iq['prop_date'] = pd.to_datetime(df_iq['prop_date'],errors ='coerce') # 21,294 or 96.7% manually cleaned some dates in xls
 df_iq['prop_year'] = np.where(pd.notnull(df_iq['prop_year']),df_iq['prop_date'].dt.year,0) # increased count by 2k
-
 
 
 # any easy cleanings - no done manually in Excel
@@ -60,6 +60,72 @@ df_iq['diff_months_cod'] = np.where((df_iq['diff_months_cod']<3)&(df_iq['q_statu
 df_iq['diff_months_ia']=(df_iq['ia_date']-df_iq['q_date'])/np.timedelta64(1,'M')
 
 # add voltage lvl - cleaned up as number, these values could be off as the naming is not consistent across ISOs
-df_iq['ix_voltage'] = df_iq["poi_name"].str.extract(r'(\d+)', expand=False)
+volts = df_iq["poi_name"].str.extract(r'(\d+)\s[kK][vV]|(\d+)[kK][vV]', expand=False).fillna(0).astype(int)
+volts['sum'] = volts[0]+volts[1]
+df_iq['ix_voltage'] = volts['sum']
 
+# what is the diff between region(24,381) and entity(24,381)
+df_iq['region'].unique()# 9 
+df_iq['entity'].nunique() # 42
+df_iq['utility'].nunique() # 228
+
+# Probability of successful completion based on stage of study - what is the haircut and where is it trending?
+
+# TREND USING SAME PARAMS AS REPORT
+# tie their numbers
+# Only 27%** of all projects requesting interconnection from 2000 to 2016 achieved commercial operation by year-end 2021
+df_trend = df_iq[['q_year','q_status','cod_year','type_clean','mw1','region']]
+df_trend = df_trend[(df_trend['q_year']>=2000)&(df_trend['q_year']<=2016)&(df_trend['cod_year']<=2021)]
+# df_trend.groupby(['q_status']).count()
+# x = 464+2682+35+6709
+# 2682/x # ties out
+df_trend.to_csv('df_trend.csv')
+## bin by online year
+## toggle by technology
+## toggle by location
+
+# TIME to IA/COD
+df_trend_ia = df_iq[['q_year','q_status','cod_year','type_clean','mw1','region','ix_voltage','diff_months_ia','diff_months_cod']]
+df_trend_ia = df_trend_ia[(df_trend_ia['q_year']>=2000)&(df_trend_ia['q_year']<=2016)&(df_trend_ia['cod_year']<=2021)]
+df_trend_volt = df_trend_ia.groupby(['q_status']).mean(['diff_months_ia','diff_months_cod']) # 24.5 months to ia and 39 months to cod 
+df_trend_ia.to_csv('df_trend_ia.csv')
+
+# import FIPS to match the geolocs
+df_fips = pd.read_csv('fips.csv',dtype=str)
+df_fips = df_fips[['Abbr.','FIPS']]
+df_iq = pd.merge(df_iq,df_fips,how='left',left_on='state',right_on='Abbr.')
 df_iq.info()
+df_iq.drop(labels=['Abbr.'],axis=1, inplace=True)
+
+# 24,380 records, 23,973 with state, 23,963 with county, 272 mnissing both state and county
+# df_iq[df_iq.loc[ :,['state','county_1'] ].isnull().sum(axis=1) == 2]
+
+# MATCH GEOLOC
+geo_county=gpd.read_file(LOC_PATH+'us_counties.geojson')
+geo_county['NAME'] = geo_county['NAME'].str.lower()
+geo_c = geo_county[['NAME','STATEFP','geometry']]
+geo_c.info()
+
+# merge the geo to iq
+# 19,653/23,973 or 18% did not join
+df_iq_geo = df_iq.merge(geo_c,how='left',right_on=['NAME','STATEFP'],left_on=['county_1','FIPS'],indicator=True).reset_index()
+df_iq_geo.drop(labels='_merge',axis=1,inplace=True)
+
+## MAPPING FILE FOR QUEUE - cleaned active MISO, PJM and NYISO
+df_iq_geo.to_csv('df_iq_geo.csv')
+# active 6629/8151 or 18% did not join
+# manually mapped around 200 in the maerkets for which we have cost data 3970/4100 so 96.8% active mapped in those markets
+# df_iq_geo[(df_iq_geo['q_status']=='active')&(df_iq_geo['region'].isin(['PJM','MISO','NYISO']))].info()
+
+# df_iq_geo_unmatch = df_iq_geo[['q_id','q_year','state','county_1','region','type_clean','q_status','geometry']]
+# df_iq_geo_unmatch = df_iq_geo_unmatch[(df_iq_geo_unmatch['q_year']>2016)&(df_iq_geo_unmatch['geometry'].isnull())]
+# df_iq_geo_unmatch[df_iq_geo_unmatch['region']=='MISO']
+# df_iq_geo_unmatch.groupby(['region','q_status']).count()
+
+
+
+
+
+
+
+
