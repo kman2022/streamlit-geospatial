@@ -80,10 +80,11 @@ df_iq['utility'].nunique() # 228
 # tie their numbers
 # Only 27%** of all projects requesting interconnection from 2000 to 2016 achieved commercial operation by year-end 2021
 df_trend = df_iq[['q_year','q_status','cod_year','type_clean','mw1','region']]
-df_trend = df_trend[(df_trend['q_year']>=2000)&(df_trend['q_year']<=2016)&(df_trend['cod_year']<=2021)]
+# df_trend = df_trend[(df_trend['q_year']>=2000)&(df_trend['q_year']<=2016)&(df_trend['cod_year']<=2021)]
 # df_trend.groupby(['q_status']).count()
 # x = 464+2682+35+6709
 # 2682/x # ties out
+df_trend.info()
 # df_trend.to_csv('df_trend.csv')
 ## bin by online year
 ## toggle by technology
@@ -129,7 +130,7 @@ df_iq_geo = df_iq.merge(geo_c,how='left',right_on=['NAME','STATEFP'],left_on=['c
 df_iq_geo.drop(labels='_merge',axis=1,inplace=True)
 
 ## MAPPING FILE FOR QUEUE - cleaned active MISO, PJM and NYISO
-df_iq_geo.to_csv('df_iq_geo.csv')
+# df_iq_geo.to_csv('df_iq_geo.csv')
 # active 6629/8151 or 18% did not join
 # manually mapped around 200 in the maerkets for which we have cost data 3970/4100 so 96.8% active mapped in those markets
 # df_iq_geo[(df_iq_geo['q_status']=='active')&(df_iq_geo['region'].isin(['PJM','MISO','NYISO']))].info()
