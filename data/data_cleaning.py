@@ -104,19 +104,15 @@ df_trend_sum
 
 
 
-
-
-
-
 # import FIPS to match the geolocs
-df_fips = pd.read_csv('fips.csv',dtype=str)
+df_fips = pd.read_csv(LOC_PATH+'fips.csv',dtype=str)
 df_fips = df_fips[['Abbr.','FIPS']]
 df_iq = pd.merge(df_iq,df_fips,how='left',left_on='state',right_on='Abbr.')
 df_iq.info()
 df_iq.drop(labels=['Abbr.'],axis=1, inplace=True)
 
-# 24,380 records, 23,973 with state, 23,963 with county, 272 mnissing both state and county
-# df_iq[df_iq.loc[ :,['state','county_1'] ].isnull().sum(axis=1) == 2]
+# 24,380 records, 24,154 with state, 23,969 with county, 94 missing both state and county
+df_iq[df_iq.loc[ :,['state','county_1'] ].isnull().sum(axis=1) == 2]
 
 # MATCH GEOLOC
 geo_county=gpd.read_file(LOC_PATH+'us_counties.geojson')
@@ -125,10 +121,10 @@ geo_c = geo_county[['NAME','STATEFP','geometry']]
 geo_c.info()
 
 # merge the geo to iq
-# 19,653/23,973 or 18% did not join
+# 19,653/23,969 or 18% did not join
 df_iq_geo = df_iq.merge(geo_c,how='left',right_on=['NAME','STATEFP'],left_on=['county_1','FIPS'],indicator=True).reset_index()
 df_iq_geo.drop(labels='_merge',axis=1,inplace=True)
-
+df_iq_geo.info()
 ## MAPPING FILE FOR QUEUE - cleaned active MISO, PJM and NYISO
 # df_iq_geo.to_csv('df_iq_geo.csv')
 # active 6629/8151 or 18% did not join
@@ -140,6 +136,7 @@ df_iq_geo_unmatch = df_iq_geo[['q_id','q_year','state','county_1','region','type
 df_iq_geo_unmatch = df_iq_geo_unmatch[(df_iq_geo_unmatch['q_year']>2016)&(df_iq_geo_unmatch['geometry'].isnull())&(df_iq_geo_unmatch['q_status']=='operational')]
 df_iq_geo_unmatch[df_iq_geo_unmatch['region']=='MISO']
 df_iq_geo_unmatch.groupby(['region','q_status']).count()
+
 
 
 
