@@ -125,12 +125,25 @@ geo_c.info()
 df_iq_geo = df_iq.merge(geo_c,how='left',right_on=['NAME','STATEFP'],left_on=['county_1','FIPS'],indicator=True).reset_index()
 df_iq_geo.drop(labels='_merge',axis=1,inplace=True)
 df_iq_geo.info()
+
+gdp_iq_qeo = gpd.GeoDataFrame(df_iq_geo,geometry='geometry',crs='EPSG:4326')
+gdp_iq_qeo.columns
+geo_cols = ['q_id','q_status','q_year','cod_year','project_name','utility','NAME','state','region','mw1','diff_months_cod','ix_voltage','geometry']
+gdp_iq_qeo_short = gpd.GeoDataFrame(df_iq_geo,geometry='geometry',crs='EPSG:4326',columns=geo_cols)
+gdp_iq_qeo_short.set_index('q_id',inplace=True)
+gdp_iq_qeo_short.dropna(subset=['geometry'],inplace=True)
+gdp_iq_qeo_short.info()
+
+gdp_iq_qeo_short.to_file('gdp_iq_qeo.geojson',driver="GeoJSON")
+
 ## MAPPING FILE FOR QUEUE - cleaned active MISO, PJM and NYISO
 # df_iq_geo.to_csv('df_iq_geo.csv')
 # active 6629/8151 or 18% did not join
 # manually mapped around 200 in the maerkets for which we have cost data 3970/4100 so 96.8% active mapped in those markets
 # df_iq_geo[(df_iq_geo['q_status']=='active')&(df_iq_geo['region'].isin(['PJM','MISO','NYISO']))].info()
 df_iq_geo[(df_iq_geo['q_status']=='operational')&(df_iq_geo['region'])].info()
+
+
 
 df_iq_geo_unmatch = df_iq_geo[['q_id','q_year','state','county_1','region','type_clean','q_status','geometry']]
 df_iq_geo_unmatch = df_iq_geo_unmatch[(df_iq_geo_unmatch['q_year']>2016)&(df_iq_geo_unmatch['geometry'].isnull())&(df_iq_geo_unmatch['q_status']=='operational')]
